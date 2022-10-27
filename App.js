@@ -10,15 +10,23 @@ import {
   SafeAreaView,
   Switch,
   ActivityIndicator,
+  Linking,
+  Button,
+  Modal,
+  TouchableHighlight
 } from "react-native";
-
 import pokemons from "./utils/pokemon";
+import { WebView } from "react-native-webview";
 
 export default function App() {
   const [searchTyped, setSearchTyped] = useState("");
   const [search, setSearch] = useState("");
   const [isSwitchOn, setIsSwitchOn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState("");
+  const [showWebView, setShowWebView] = useState(false);
+
 
   const onToggleSwitch = () => {
     setIsSwitchOn(!isSwitchOn);
@@ -31,6 +39,79 @@ export default function App() {
       setIsLoading(false);
     }, 2000);
   };
+
+  const handlePressToLink = () => {
+    Linking.openURL(selectedImage);
+    setShowModal(false);
+  };
+
+  const renderModal = () => {
+    return (
+      <Modal visible={showModal} transparent={true} animationType="slide">
+      <View style={styles.modalContainer}>
+        <View style={styles.modalBody}>
+          <Text style={styles.ask}>¿Desea abrir la imagen?</Text>
+          <View style={styles.response}>
+            <Text
+              style={styles.close}
+              onPress={() => {
+                setShowModal(false);
+              }}
+            >
+              Cancelar
+            </Text>
+            <Text style={styles.open} onPress={handlePressToLink}>
+              Abrir
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Modal>
+    )
+  };
+
+  const renderWebView = () =>{
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showWebView}
+        onRequestClose={() => {
+          setShowWebView(!showWebView);
+        }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+          <TouchableHighlight
+            onPress={() => {
+              setShowWebView(!showWebView);
+            }}>
+            <Text
+              style={{
+                fontSize: 30,
+                fontWeight: 'bold',
+                color: 'white',
+                textAlign: 'right',
+              }}>
+              X
+            </Text>
+          </TouchableHighlight>
+          <WebView
+            style={{ width: 300, marginVertical: 100 }}
+            source={{ uri: selectedImage }}
+          />
+        </View>
+      </Modal>
+    );
+  }
+
+
+
+
   return (
     <View style={styles.container}>
       <View style={styles.head}>
@@ -44,7 +125,6 @@ export default function App() {
           <Text>Desactivar busqueda</Text>
           <Switch value={isSwitchOn} onValueChange={onToggleSwitch} />
         </View>
-
         <View style={styles.searcherContainer}>
           <TextInput
             editable={!isSwitchOn}
@@ -62,34 +142,56 @@ export default function App() {
             </Text>
           </TouchableOpacity>
         </View>
+          {renderModal()}
+          {renderWebView()}
       </View>
+
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#f2c105" />
         </View>
       ) : (
-        <View style={styles.pokemonContainer}>
-          <FlatList
-            data={pokemons.filter((pokemon) =>
-              pokemon.name.includes(search.toLocaleLowerCase())
-            )}
-            renderItem={({ item }) => {
-              return (
-                <SafeAreaView>
-                  <View style={styles.pokemonCard} key={item.name}>
-                    <Image
-                      source={{ uri: item.url }}
-                      style={styles.pokemonImage}
-                    />
-                    <Text style={styles.pokemonName}>
-                      {item.name[0].toUpperCase() + item.name.slice(1)}
-                    </Text>
-                  </View>
-                </SafeAreaView>
-              );
-            }}
-          />
-        </View>
+        <>
+          <View style={styles.pokemonContainer}>
+            <FlatList
+              data={pokemons.filter((pokemon) =>
+                pokemon.name.includes(search.toLocaleLowerCase())
+              )}
+              renderItem={({ item }) => {
+                return (
+                  <SafeAreaView>
+                    <View style={styles.pokemonCard} key={item.name}>
+                      <TouchableOpacity onPress={() =>{
+                        setSelectedImage(item.url);
+                        setShowWebView(true);
+                      }}>
+                        <Image
+                          source={{ uri: item.url }}
+                          style={styles.pokemonImage}
+                        />
+                      </TouchableOpacity>
+                      <View style={styles.nameCard}>
+                        <View>
+                          <Text style={styles.pokemonName}>
+                            {item.name[0].toUpperCase() + item.name.slice(1)}
+                          </Text>
+                        </View>
+                        <Text
+                          onPress={() => {
+                            setShowModal(true);
+                            setSelectedImage(item.url);
+                          }}
+                        >
+                          Imagen
+                        </Text>
+                      </View>
+                    </View>
+                  </SafeAreaView>
+                );
+              }}
+            />
+          </View>
+        </>
       )}
     </View>
   );
@@ -107,7 +209,7 @@ const styles = StyleSheet.create({
   logo: {
     height: 100,
     width: 256,
-    marginVertical:10,
+    marginVertical: 10,
   },
   searcherContainer: {
     flexDirection: "row",
@@ -160,5 +262,56 @@ const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
+  },
+  nameCard: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBody: {
+    backgroundColor: "white",
+    width: 350,
+    height: 170,
+    borderRadius: 40,
+  },
+  ask: {
+    textAlign: "center",
+    fontSize: 25,
+    marginTop: 30,
+  },
+  response: {
+    flexDirection: "row",
+    marginTop: 25,
+    justifyContent: "center",
+  },
+  close: {
+    padding: 15,
+    backgroundColor: "#1e90ff",
+    fontSize: 20,
+    borderRadius: 15,
+    width: 120,
+    marginRight: 10,
+  },
+  open: {
+    padding: 15,
+    backgroundColor: "#1e90ff",
+    fontSize: 20,
+    borderRadius: 15,
+    width: 120,
+    textAlign: "center",
+    marginLeft: 10,
+  },
+  webViewContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#222",
   },
 });
